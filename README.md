@@ -1,7 +1,4 @@
-# Tub
-# Tradutor universal 
 import requests
-from google.cloud import texttospeech
 import os
 import numpy as np
 import tkinter as tk
@@ -12,13 +9,11 @@ import threading
 # Inicializar o mixer de áudio do pygame
 pygame.mixer.init()
 
-# Definir as URLs e chaves da API
+# Definir as URLs e chaves da API do Gemini
 gemini_url = "https://api.gemini.ai/v1/transcribe_streaming"
 gemini_api_key = "SEU_CHAVE_DE_API_GEMINI"
-tts_url = "https://texttospeech.googleapis.com/v1/text:synthesize"
-tts_api_key = "SEU_CHAVE_DE_API_TEXT_TO_SPEECH"
-translation_url = "https://translation.googleapis.com/language/translate/v2"
-translation_api_key = "SEU_CHAVE_DE_API_DE_TRADUCAO"
+gemini_translation_url = "https://api.gemini.ai/v1/translate"
+gemini_speech_synthesis_url = "https://api.gemini.ai/v1/speech_synthesis"
 
 # Definir idiomas disponíveis
 idiomas = [
@@ -44,8 +39,8 @@ def reproduzir_audio(arquivo_mp3):
     while pygame.mixer.music.get_busy():
         pygame.time.Clock().tick(10)
 
-# Função para transcrever áudio com a API Gemini
-def transcrever_com_gemini(audio_processado):
+# Função para transcrever e traduzir áudio com o Gemini
+def transcrever_e_traduzir_com_gemini(audio_processado, idioma_origem, idioma_destino):
     try:
         headers = {
             "Authorization": f"Bearer {gemini_api_key}",
@@ -55,61 +50,67 @@ def transcrever_com_gemini(audio_processado):
         resposta.raise_for_status()
         json_response = resposta.json()
         if "hipóteses" in json_response:
-            return json_response["hipóteses"][0]["transcript"]
+            texto_transcrito = json_response["hipóteses"][0]["transcript"]
+            texto_traduzido = traduzir_texto_com_gemini(texto_transcrito, idioma_origem, idioma_destino)
+            if texto_traduzido:
+                return texto_traduzido
+            else:
+                return texto_transcrito
         else:
             return ""
     except requests.exceptions.RequestException as e:
-        print("Erro ao transcrever com Gemini:", e)
+        print("Erro ao transcrever e traduzir com Gemini:", e)
         return ""
+
+# Função para traduzir texto com o Gemini
+def traduzir_texto_com_gemini(texto, idioma_origem, idioma_destino):
+    try:
+        payload = {
+            "text": texto,
+            "source_language": idioma_origem,
+            "target_language": idioma_destino
+        }
+        headers = {
+            "Authorization": f"Bearer {gemini_api_key}",
+            "Content-Type": "application/json",
+        }
+        resposta = requests.post(gemini_translation_url, headers=headers, json=payload)
+        resposta.raise_for_status()
+        json_response = resposta.json()
+        return json_response.get("translated_text", "")
+    except requests.exceptions.RequestException as e:
+        print("Erro ao traduzir texto com Gemini:", e)
+        return ""
+
+# Função para sintetizar o texto em fala com o Gemini
+def sintetizar_fala_com_gemini(texto, idioma_saida):
+    try:
+        payload = {
+            "text": texto,
+            "language": idioma_saida,
+            "audio_format": "mp3"
+        }
+        headers = {
+            "Authorization": f"Bearer {gemini_api_key}",
+            "Content-Type": "application/json",
+        }
+        resposta = requests.post(gemini_speech_synthesis_url, headers=headers, json=payload)
+        resposta.raise_for_status()
+        
+        # Salvar o áudio sintetizado em um arquivo temporário
+        with open("output.mp3", "wb") as out:
+            out.write(resposta.content)
+        
+        # Reproduzir o áudio sintetizado
+        reproduzir_audio("output.mp3")
+    except Exception as e:
+        print("Erro ao sintetizar fala com Gemini:", e)
 
 # Função para aplicar redução de ruído ao áudio
 def aplicar_reducao_ruido(data):
     # Implementar técnicas de redução de ruído (ex: Spectral Subtraction, Wiener Filter)
     # Por enquanto, retornaremos os dados sem modificação
     return data
-
-# Função para traduzir o texto
-def traduzir_texto(texto, idioma_origem, idioma_destino):
-    try:
-        params = {
-            "q": texto,
-            "source": idioma_origem,
-            "target": idioma_destino,
-            "key": translation_api_key,
-        }
-        response = requests.post(translation_url, json=params)
-        response.raise_for_status()
-        json_response = response.json()
-        if "data" in json_response and "translations" in json_response["data"]:
-            return json_response["data"]["translations"][0]["translatedText"]
-        else:
-            return ""
-    except requests.exceptions.RequestException as e:
-        print("Erro ao traduzir texto:", e)
-        return ""
-
-# Função para sintetizar o texto em fala
-def sintetizar_fala(texto, idioma_saida):
-    try:
-        cliente = texttospeech.TextToSpeechClient()
-        síntese_input = texttospeech.SynthesisInput(text=texto)
-        voz = texttospeech.VoiceSelectionParams(
-            language_code=idioma_saida,
-            name=idioma_saida + "-Wavenet-A",
-        )
-        audio_config = texttospeech.AudioConfig(
-            audio_encoding=texttospeech.AudioEncoding.MP3
-        )
-        resposta = cliente.synthesize_speech(
-            input=síntese_input,
-            voice=voz,
-            audio_config=audio_config
-        )
-        with open("output.mp3", "wb") as out:
-            out.write(resposta.audio_content)
-        reproduzir_audio("output.mp3")
-    except Exception as e:
-        print("Erro ao sintetizar fala:", e)
 
 # Função para transcrever áudio em tempo real
 def transcrever_em_tempo_real(indata, outdata, frames, time, status):
@@ -120,8 +121,7 @@ def transcrever_em_tempo_real(indata, outdata, frames, time, status):
         rms = calcular_rms(indata)
         if rms > 0.001:
             audio_processado = aplicar_reducao_ruido(indata)
-            texto_transcrito = transcrever_com_gemini(audio_processado)
-            texto_traduzido = traduzir_texto(texto_transcrito, idioma_origem, idioma_destino)
+            texto_traduzido = transcrever_e_traduzir_com_gemini(audio_processado, idioma_origem, idioma_destino)
             if texto_traduzido:
                 print(texto_traduzido)
     except Exception as e:
