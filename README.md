@@ -10,6 +10,7 @@ import threading
 # Inicializar o mixer de áudio do pygame
 pygame.mixer.init()
 
+pyg = pygame.mixer.init()
 # Configurar a chave da API
 GOOGLE_API_KEY = userdata.get('GOOGLE_API_KEY')
 genai.configure(api_key=GOOGLE_API_KEY)
@@ -18,17 +19,17 @@ genai.configure(api_key=GOOGLE_API_KEY)
 stop_audio_thread = False
 
 # Função para reproduzir o áudio sintetizado
-def reproduzir_audio(pygame.mixer.init()):
-    pygame.mixer.music.load(pygame.mixer.init()
+def reproduzir_audio(pyg):
+    pygame.mixer.music.load(pyg)
     pygame.mixer.music.play()
     while pygame.mixer.music.get_busy():
         pygame.time.Clock().tick(10)
 
 # Função para gerar conteúdo com o modelo generativo
-def gerar_conteudo_com_modelo(pygame.mixer.init()):
+def gerar_conteudo_com_modelo(pyg):
     try:
         # Fazer o upload do arquivo de áudio
-        trad = genai.upload_file(path=pygame.mixer.init())
+        trad = genai.upload_file(path=pyg)
 
         # Criar uma instância do modelo generativo
         model = genai.GenerativeModel('gemini-1.5-pro-latest')
