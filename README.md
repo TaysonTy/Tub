@@ -8,8 +8,7 @@ import threading
 # Inicializar o mixer de áudio do pygame
 pygame.mixer.init()
 
-# Configurar a chave da API
-# Supondo que você tenha definido GOOGLE_API_KEY em algum lugar
+# Configurar a chave da key
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')  # ou de alguma outra fonte segura
 
 # Variáveis globais para controle de fluxo de áudio
@@ -55,8 +54,7 @@ def transcrever_em_tempo_real(indata, frames, time, status):
 
 # Função para transcrever o áudio em texto usando uma API de transcrição
 def transcrever_audio(audio):
-    # Aqui você deve implementar a lógica para transcrição do áudio usando uma API de transcrição de sua escolha
-    # Por exemplo, usando a API de reconhecimento de fala do Google Cloud ou outra API semelhante
+    
     # Retorna o texto transcrito
     pass
 
