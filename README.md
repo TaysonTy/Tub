@@ -9,7 +9,7 @@ from google import generativeai as genai
 # Inicializar o mixer de áudio do pygame
 pygame.mixer.init()
 # Configurar a chave da key
-GOOGLE_API_KEY = os.getenv('AIzaSyBJmYfGleXXfSqg1pSUzhuEgEcMyaM6I_g')
+GOOGLE_API_KEY = os.getenv('sua chave')
 # Variáveis globais para controle de fluxo de áudio
 stop_audio_thread = False
 chunk = 1024  # Tamanho do chunk de áudio
